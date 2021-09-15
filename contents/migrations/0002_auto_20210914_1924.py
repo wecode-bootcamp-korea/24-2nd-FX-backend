@@ -22,7 +22,12 @@ class Migration(migrations.Migration):
                 'db_table': 'content_genre_relations',
             },
         ),
-        migrations.AlterField(
+        migrations.RemoveField(
+            model_name='content',
+            name='genre',
+            field=models.ManyToManyField(blank=True, related_name='contents', to='contents.Genre'),
+        ),
+        migrations.AddField(
             model_name='content',
             name='genre',
             field=models.ManyToManyField(blank=True, related_name='contents', through='contents.ContentGenre', to='contents.Genre'),
