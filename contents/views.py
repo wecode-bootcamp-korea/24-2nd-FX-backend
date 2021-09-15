@@ -1,3 +1,7 @@
+import functools
+
+from django.core.exceptions import FieldError
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.views import View
 
@@ -24,6 +28,43 @@ class ContentView(View):
             }
 
             return JsonResponse({"Result": result}, status=200)
+
+        except Content.DoesNotExist:
+            return JsonResponse({"Result": "CONTENT_DOES_NOT_EXIST"}, status=404)
+
+class ContentListView(View):
+    def get(self, request):
+        try:
+            ORDER_BY   = request.GET.get("order-by", "?")
+            LIMIT      = int(request.GET.get("limit", 10))
+            CATEGORIES = request.GET.getlist("category")
+            NATION     = request.GET.getlist("nation")
+            GENRE      = request.GET.getlist("genre")
+
+            FILTERS = {
+            "CATEGORIES" : Q(category__in =CATEGORIES),
+            "NATION"     : Q(nation__in=NATION),
+            "GENRE"      : Q(genre__name__in=GENRE),
+            }
+
+            query = functools.reduce(lambda q1, q2: q1.add(q2, Q.AND), [FILTERS.get(request.GET[key], Q()) for key in request.GET.keys()])
+
+            contents = Content.objects.filter(query).annotate(hot = Count('wishlists')).order_by(ORDER_BY).prefetch_related("genre")[:LIMIT]
+
+            result   = [{
+                "id"          : content.id,
+                "name"        : content.name,
+                "category"    : content.category,
+                "description" : content.description,
+                "nation"      : content.nation,
+                "thumb_nail"  : content.thumb_nail,
+                "genre"       : [{"genre" : genre.name} for genre in content.genre.all()],
+                } for content in contents]
+
+            return JsonResponse({"Result": result}, status=200)
+
+        except FieldError:
+            return JsonResponse({"Result": "FIELD_ERROR"}, status=404)
 
         except Content.DoesNotExist:
             return JsonResponse({"Result": "CONTENT_DOES_NOT_EXIST"}, status=404)
