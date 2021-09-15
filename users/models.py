@@ -6,7 +6,7 @@ class User(TimeStampedModel):
     email       = models.EmailField(max_length=100, null=True ,blank=True)
     password    = models.CharField(max_length=500)
     signup_type = models.CharField(max_length=100)
-    kakao_id    = models.CharField(max_length=100, blank=True, unique=True)
+    kakao_id    = models.CharField(max_length=100, blank=True, null=True, unique=True)
 
     class Meta:
         db_table = "users"
