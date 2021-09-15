@@ -17,4 +17,5 @@ from django.urls import path, include
 
 urlpatterns = [
     path('content', include('contents.urls')),
+    path('users', include('users.urls')),
 ]
