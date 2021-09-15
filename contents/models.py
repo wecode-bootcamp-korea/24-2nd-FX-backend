@@ -16,9 +16,9 @@ class Content(TimeStampedModel):
         return self.name
 
 class Detail(TimeStampedModel):
-    episode      = models.CharField(max_length=45)
+    episode      = models.CharField(max_length=100)
     description  = models.CharField(max_length=400)
-    running_time = models.TimeField()
+    running_time = models.IntegerField()
     thumb_nail   = models.URLField(max_length=300)
     file         = models.URLField(max_length=300)
     content      = models.ForeignKey("Content", on_delete=models.CASCADE, related_name="details")
