@@ -42,7 +42,7 @@ with open(CSV_PATH_PRODUCT) as in_file:
         description = row[10],
         running_time = row[11],
         thumb_nail = row[12],
-        file = "video/"+row[9]+".mov",
+        file = "video/"+row[9]+".mp4",
         content = content,
         )
         if created:

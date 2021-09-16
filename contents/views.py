@@ -1,11 +1,19 @@
+import os
+import re
+import mimetypes
 import functools
+import boto3
+from wsgiref.util import FileWrapper
+from io import BytesIO
 
 from django.core.exceptions import FieldError
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.views import View
+from django.http.response import StreamingHttpResponse
 
-from .models import Content
+from .models import Content, Detail
+from my_settings import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 
 class ContentView(View):
     def get(self, request, content_id):
@@ -65,3 +73,84 @@ class ContentListView(View):
 
         except FieldError:
             return JsonResponse({"Result": "FIELD_ERROR"}, status=404)
+
+        except Content.DoesNotExist:
+            return JsonResponse({"Result": "CONTENT_DOES_NOT_EXIST"}, status=404)
+
+class MyS3Client:
+    def __init__(self, s3_client, bucket):
+        self.s3_client = s3_client
+        self.bucket = bucket
+
+    def get_video_file(self, video_path):
+        return self.s3_client.get_object(Bucket = self.bucket, Key = video_path)
+
+boto3_s3  = boto3.client("s3", region_name = 'ap-northeast-2', aws_access_key_id = AWS_ACCESS_KEY_ID, aws_secret_access_key = AWS_SECRET_ACCESS_KEY)
+bucket    = "wecode-flix"
+s3_client = MyS3Client(boto3_s3, bucket)
+
+class RangeFileWrapper(object):
+    def __init__(self, filelike, blksize=10240, offset=0, length=None):
+        self.filelike = filelike
+        self.filelike.seek(offset, os.SEEK_SET)
+        self.remaining = length
+        self.blksize = blksize
+
+    def close(self):
+        if hasattr(self.filelike, 'close'):
+            self.filelike.close()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.remaining is None:
+            data = self.filelike.read(self.blksize)
+            if data:
+                return data
+            raise StopIteration()
+
+        else:
+            if self.remaining <= 0:
+                raise StopIteration()
+            data = self.filelike.read(min(self.remaining, self.blksize))
+            if not data:
+                raise StopIteration()
+            self.remaining -= len(data)
+            return data
+
+class ContentStreamingView(View):
+    def get(self, request, detail_id):
+        video_path = Detail.objects.get(id = detail_id).file
+        video      = s3_client.get_video_file(video_path)
+        size       = video.get("ContentLength")
+
+        range_re   = re.compile(r'bytes\s*=\s*(\d+)\s*-\s*(\d*)', re.I)
+
+        range_header = request.META.get('HTTP_RANGE', '').strip()
+        range_match  = range_re.match(range_header)
+        content_type, encoding = mimetypes.guess_type(video_path)
+        content_type = content_type or 'application/octet-stream'
+
+        if range_match:
+            first_byte, last_byte = range_match.groups()
+
+            first_byte = int(first_byte) if first_byte else 0
+            last_byte = int(last_byte) if last_byte else size - 1
+
+            if last_byte >= size:
+                last_byte = size - 1
+
+            length = last_byte - first_byte + 1
+            result = StreamingHttpResponse(RangeFileWrapper(BytesIO(video["Body"].read()), offset=first_byte, length=length), status=206, content_type=content_type)
+            result['Content-Length'] = str(length)
+            result['Content-Range']  = 'bytes %s-%s/%s' % (first_byte, last_byte, size)
+
+        else:
+            result = StreamingHttpResponse(FileWrapper(BytesIO(video["Body"].read())), content_type=content_type)
+            result['Content-Length'] = str(size)
+
+        result['Accept-Ranges'] = 'bytes'
+        result['X-Content-Type-Options'] = 'nosniff'
+        
+        return result

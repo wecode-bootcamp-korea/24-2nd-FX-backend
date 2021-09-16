@@ -156,6 +156,8 @@ CORS_ALLOW_HEADERS = (
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
+    "Range",
+    "X-Content-Type-Options",
 )
 
 LOGGING = {
