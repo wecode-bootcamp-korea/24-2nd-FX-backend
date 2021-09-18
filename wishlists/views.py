@@ -35,3 +35,19 @@ class WishListView(View):
 
         except Content.DoesNotExist:
             return JsonResponse({"Result": "CONTENT_DOES_NOT_EXIST"}, status=404)
+
+    @token_validation_decorator
+    def get(self, request):
+        wishlists =  Wishlist.objects.filter(user=request.user, like = True).select_related('content').prefetch_related('content__genre')
+
+        result  = [{
+            "content_id"  : wishlist.content.id,
+            "name"        : wishlist.content.name,
+            "category"    : wishlist.content.category,
+            "description" : wishlist.content.description,
+            "nation"      : wishlist.content.nation,
+            "thumb_nail"  : wishlist.content.thumb_nail,
+            "genre"       : [{"genre" : genre.name} for genre in wishlist.content.genre.all()],
+        } for wishlist in wishlists]
+
+        return JsonResponse({"Result": result}, status=200)

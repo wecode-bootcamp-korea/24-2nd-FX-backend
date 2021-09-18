@@ -123,3 +123,39 @@ class ContentTest(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), {'message': 'KEY_ERROR'})
+        response = client.get('/wishlists', **header, content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"Result": []})
+
+
+    def test_get_wishlist(self):
+        access_token = jwt.encode({
+                'user_id': 2,
+                'exp'    : datetime.utcnow() + timedelta(minutes=10)
+                }, SECRET_KEY, algorithm=ALGORITHM)
+
+        client   = Client()
+        header   = {"HTTP_Authorization" : access_token}
+        response = client.get('/wishlists', **header, content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"Result":[{
+                "user_id" : 2,
+                "content_id" : 2,
+                }]}
+            )
+
+
+    def test_get_wishlist_does_not_exist(self):
+        access_token = jwt.encode({
+                'user_id': 1,
+                'exp'    : datetime.utcnow() + timedelta(minutes=10)
+                }, SECRET_KEY, algorithm=ALGORITHM)
+
+        client   = Client()
+        header   = {"HTTP_Authorization" : access_token}
+        response = client.get('/wishlists', **header, content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"Result": []}) 
