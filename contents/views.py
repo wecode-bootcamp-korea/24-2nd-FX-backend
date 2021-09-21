@@ -47,7 +47,7 @@ class ContentListView(View):
             "GENRE"      : Q(genre__name__in=GENRE),
             }
 
-            query = functools.reduce(lambda q1, q2: q1.add(q2, Q.AND), [FILTERS.get(request.GET[key], Q()) for key in request.GET.keys()])
+            query = functools.reduce(lambda q1, q2: q1.add(q2, Q.AND), [FILTERS.get(request.GET[key], Q()) for key in request.GET.keys()], Q())
 
             contents = Content.objects.filter(query).annotate(hot = Count('wishlists')).order_by(ORDER_BY).prefetch_related("genre")[:LIMIT]
 
