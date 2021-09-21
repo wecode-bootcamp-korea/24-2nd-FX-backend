@@ -42,13 +42,12 @@ class ContentListView(View):
             GENRE      = request.GET.getlist("genre")
 
             FILTERS = {
-            "CATEGORIES" : Q(category__in =CATEGORIES),
-            "NATION"     : Q(nation__in=NATION),
-            "GENRE"      : Q(genre__name__in=GENRE),
+            "category"   : Q(category__in =CATEGORIES),
+            "nation"     : Q(nation__in=NATION),
+            "genre"      : Q(genre__name__in=GENRE),
             }
 
-            query = functools.reduce(lambda q1, q2: q1.add(q2, Q.AND), [FILTERS.get(request.GET[key], Q()) for key in request.GET.keys()])
-
+            query    = functools.reduce(lambda q1, q2: q1.add(q2, Q.AND), [FILTERS.get(key, Q()) for key in request.GET.keys()], Q())
             contents = Content.objects.filter(query).annotate(hot = Count('wishlists')).order_by(ORDER_BY).prefetch_related("genre")[:LIMIT]
 
             result   = [{
@@ -65,6 +64,3 @@ class ContentListView(View):
 
         except FieldError:
             return JsonResponse({"Result": "FIELD_ERROR"}, status=404)
-
-        except Content.DoesNotExist:
-            return JsonResponse({"Result": "CONTENT_DOES_NOT_EXIST"}, status=404)
