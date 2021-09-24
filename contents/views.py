@@ -20,6 +20,7 @@ class ContentView(View):
                 "thumb_nail"  : content.thumb_nail,
                 "genre"       : [{"genre" : genre.name} for genre in content.genre.all()],
                 "detail"      : [{
+                    "detail_id"          : detail.id,
                     "episode"            : detail.episode,
                     "detail_description" : detail.description,
                     "running_time"       : detail.running_time,
