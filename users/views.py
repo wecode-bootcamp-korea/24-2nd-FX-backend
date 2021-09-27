@@ -2,6 +2,7 @@ import json
 import re
 import bcrypt
 import jwt
+from enum import Enum, unique, auto
 from datetime import datetime, timedelta
 
 from django.views import View
@@ -37,7 +38,7 @@ class SignUpView(View):
                 name        = data['name'],
                 email       = data['email'],
                 password    = decoded_password,
-                signup_type = data['signup_type']
+                signup_type = User.SignupType.FLIX
             )
             return JsonResponse({'message': 'SUCCESS'}, status=201)
 
@@ -54,12 +55,14 @@ class SignInView(View):
         data          = json.loads(request.body)
 
         try:
+            if data['signup_type'] != User.SignupType.FLIX.name:
+                return JsonResponse({'message': 'LOGIN_TYPE_IS_NOT_FLIX'}, status=400)
             if not User.objects.filter(email=data['email']).exists():
-                return JsonResponse({'message': 'USER_DOES_NOT_EXIST'}, status=401)
+                return JsonResponse({'message': 'USER_DOES_NOT_EXIST'}, status=400)
             
             user = User.objects.get(email=data['email'])
             if not bcrypt.checkpw(data['password'].encode(ENCODE_FORMAT), user.password.encode(ENCODE_FORMAT)):
-                return JsonResponse({'message': 'INVALID_PASSWORD'}, status=401)
+                return JsonResponse({'message': 'INVALID_PASSWORD'}, status=403)
 
             access_token = jwt.encode({
                 'user_id': user.id,
