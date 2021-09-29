@@ -13,19 +13,24 @@ from django.views import View
 from django.http.response import StreamingHttpResponse
 
 from .models import Content, Detail
-from my_settings import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+from wishlists.models import Wishlist
+from my_settings import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, BUCKET
+from users.login_decorator import token_validation_decorator
 
 class ContentView(View):
+    @token_validation_decorator
     def get(self, request, content_id):
         try:
-            content = Content.objects.prefetch_related("genre", "details").get(id=content_id)
-            result  = {
+            content  = Content.objects.prefetch_related("genre", "details").get(id=content_id)
+            wishlist = Wishlist.objects.filter(user = request.user, content = content, like=True).exists()
+            result   = {
                 "id"          : content.id,
                 "name"        : content.name,
                 "category"    : content.category,
                 "description" : content.description,
                 "nation"      : content.nation,
                 "thumb_nail"  : content.thumb_nail,
+                "wishlist"    : wishlist,
                 "genre"       : [{"genre" : genre.name} for genre in content.genre.all()],
                 "detail"      : [{
                     "detail_id"          : detail.id,
@@ -86,7 +91,7 @@ class MyS3Client:
         return self.s3_client.get_object(Bucket = self.bucket, Key = video_path)
 
 boto3_s3  = boto3.client("s3", region_name = 'ap-northeast-2', aws_access_key_id = AWS_ACCESS_KEY_ID, aws_secret_access_key = AWS_SECRET_ACCESS_KEY)
-bucket    = "wecode-flix"
+bucket    = BUCKET
 s3_client = MyS3Client(boto3_s3, bucket)
 
 class RangeFileWrapper(object):
