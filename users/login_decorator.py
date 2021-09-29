@@ -10,7 +10,7 @@ from users.models import User
 
 
 def token_validation_decorator(func):
-    def wrapper(self, request):
+    def wrapper(self, request, *args, **kwargs):
         try:
             access_token = request.headers.get('Authorization')
             if not access_token:
@@ -19,11 +19,10 @@ def token_validation_decorator(func):
             payload = jwt.decode(access_token, SECRET_KEY, algorithms=ALGORITHM)
             user = User.objects.get(id=payload['user_id'])
             request.user = user
-            return func(self, request)
+            return func(self, request, *args, **kwargs)
 
         except jwt.exceptions.DecodeError:
             return JsonResponse({'message': 'JSON_DECODE_ERROR'}, status=400)
         except jwt.exceptions.ExpiredSignatureError:
             return JsonResponse({'message': 'TOKEN_EXPIRED'}, status=403)
     return wrapper
-    

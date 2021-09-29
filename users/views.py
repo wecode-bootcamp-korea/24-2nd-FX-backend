@@ -95,7 +95,7 @@ class GoogleLogInView(View):
                 password    = '',
                 defaults    = {'name': data['name']}
             )
-  
+
             user_info = User.objects.get(kakao_id=data['google_id'])
 
             flix_access_token = jwt.encode({
